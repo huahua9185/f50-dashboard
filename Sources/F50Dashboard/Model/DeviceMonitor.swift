@@ -48,6 +48,16 @@ final class DeviceMonitor {
         }
     }
 
+    /// 载入演示数据并停止轮询，用于无设备预览和文档截图。
+    func loadDemo() {
+        stop()
+        snapshot = DemoData.snapshot
+        history = DemoData.history
+        isReachable = true
+        lastError = nil
+        lastUpdate = .now
+    }
+
     func stop() {
         pollingTask?.cancel()
         pollingTask = nil

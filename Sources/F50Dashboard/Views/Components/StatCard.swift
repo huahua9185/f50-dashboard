@@ -46,3 +46,25 @@ struct MetricRow: View {
         }
     }
 }
+
+/// 自绘的进度条。
+///
+/// 不用系统的 ProgressView：它在 ImageRenderer 里渲染不出来（会变成一块占位图），
+/// 而文档截图正是靠 ImageRenderer 生成的。
+struct ProgressBar: View {
+    var value: Double
+    var tint: Color
+    var height: CGFloat = 5
+
+    var body: some View {
+        GeometryReader { proxy in
+            ZStack(alignment: .leading) {
+                Capsule().fill(.quaternary)
+                Capsule()
+                    .fill(tint)
+                    .frame(width: proxy.size.width * min(max(value, 0), 1))
+            }
+        }
+        .frame(height: height)
+    }
+}

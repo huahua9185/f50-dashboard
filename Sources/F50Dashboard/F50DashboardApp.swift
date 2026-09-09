@@ -20,7 +20,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.accessory)
 
         let monitor = DeviceMonitor.shared
-        monitor.start()
+        // F50_DEMO=1 用假数据预览界面，不去连真实设备。
+        if ProcessInfo.processInfo.environment["F50_DEMO"] == "1" {
+            monitor.loadDemo()
+        } else {
+            monitor.start()
+        }
+
+        // 渲染文档截图后直接退出，不进入正常的界面流程。
+        if let directory = ProcessInfo.processInfo.environment["F50_RENDER_SHOTS"] {
+            ScreenshotRenderer.render(monitor: monitor, into: directory)
+            NSApp.terminate(nil)
+            return
+        }
 
         let controller = StatusItemController(monitor: monitor)
         statusItemController = controller

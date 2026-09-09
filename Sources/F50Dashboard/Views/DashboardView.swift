@@ -2,12 +2,26 @@ import SwiftUI
 
 struct DashboardView: View {
     var monitor: DeviceMonitor
+    /// ImageRenderer 渲染不出 ScrollView 的内容，生成文档截图时关掉滚动直接平铺。
+    var scrollable = true
 
     private var snapshot: DeviceSnapshot { monitor.snapshot }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+        Group {
+            if scrollable {
+                ScrollView { content }
+            } else {
+                content
+            }
+        }
+        .background(.background)
+        .navigationTitle("F50 Pro 仪表盘")
+        .frame(minWidth: 760, minHeight: 600)
+    }
+
+    private var content: some View {
+        VStack(alignment: .leading, spacing: 16) {
                 header
                 HStack(alignment: .top, spacing: 12) {
                     connectionCard
@@ -24,12 +38,8 @@ struct DashboardView: View {
                     }
                     .frame(width: 260)
                 }
-            }
-            .padding(18)
         }
-        .background(.background)
-        .navigationTitle("F50 Pro 仪表盘")
-        .frame(minWidth: 760, minHeight: 600)
+        .padding(18)
     }
 
     // MARK: - 顶部
@@ -94,8 +104,7 @@ struct DashboardView: View {
                 SignalBarsView(bars: snapshot.signalBars, height: 22)
             }
             if let quality = snapshot.signalQuality {
-                ProgressView(value: quality)
-                    .tint(quality > 0.5 ? .green : .orange)
+                ProgressBar(value: quality, tint: quality > 0.5 ? .green : .orange)
             }
             MetricRow(label: "信号格数", value: snapshot.signalBars.map { "\($0) / 5" } ?? "—")
         }

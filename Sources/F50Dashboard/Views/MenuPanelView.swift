@@ -6,6 +6,8 @@ struct MenuPanelView: View {
     /// 面板被塞在 NSPopover 里，拿不到 SwiftUI scene 的 openWindow，所以用回调。
     var onOpenDashboard: () -> Void
     var onQuit: () -> Void
+    /// 生成文档截图用：ImageRenderer 画不出真的 Toggle，换成静态样式。
+    var isPreview = false
 
     @State private var launchAtLogin = LoginItem.isEnabled
     @State private var loginItemError: String?
@@ -122,7 +124,10 @@ struct MenuPanelView: View {
 
     private var settingsSection: some View {
         VStack(alignment: .leading, spacing: 5) {
-            Toggle("开机自启", isOn: $launchAtLogin)
+            if isPreview {
+                previewToggle
+            } else {
+                Toggle("开机自启", isOn: $launchAtLogin)
                 .font(.callout)
                 .toggleStyle(.switch)
                 .controlSize(.mini)
@@ -136,8 +141,11 @@ struct MenuPanelView: View {
                         loginItemError = error.localizedDescription
                     }
                 }
+            }
 
-            if let loginItemError {
+            if isPreview {
+                EmptyView()
+            } else if let loginItemError {
                 Text(loginItemError)
                     .font(.caption2)
                     .foregroundStyle(.red)
@@ -151,6 +159,23 @@ struct MenuPanelView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 9)
+    }
+
+    /// 只用于截图的静态开关外观。
+    private var previewToggle: some View {
+        HStack {
+            Text("开机自启").font(.callout)
+            Capsule()
+                .fill(Color.accentColor)
+                .frame(width: 26, height: 15)
+                .overlay(alignment: .trailing) {
+                    Circle()
+                        .fill(.white)
+                        .frame(width: 12, height: 12)
+                        .padding(1.5)
+                }
+            Spacer()
+        }
     }
 
     private var footer: some View {

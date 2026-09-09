@@ -3,7 +3,17 @@
 ZTE F50 Pro 随身路由器的 macOS 菜单栏仪表盘。不用打开路由器网页，就能实时看到信号、
 速率、流量和接入终端。
 
-菜单栏常驻显示信号格和实时上下行速率，点击弹出快捷面板，需要看全貌时再打开仪表盘窗口。
+菜单栏常驻显示信号格和实时上下行速率：
+
+<img src="docs/menubar.png" width="248" alt="菜单栏效果">
+
+点击弹出快捷面板，需要看全貌时再打开仪表盘窗口：
+
+<img src="docs/panel.png" width="300" alt="快捷面板">
+
+<img src="docs/dashboard.png" width="940" alt="仪表盘窗口">
+
+> 以上截图使用内置演示数据生成（见下方「演示模式」），非真实设备信息。
 
 > **这是第三方非官方工具**，与中兴通讯（ZTE）没有任何关联，也未获其授权或认可。
 > ZTE、F50 Pro 等名称均为其各自所有者的商标，此处仅用于说明本工具适配的设备型号。
@@ -69,6 +79,28 @@ cd Resources && iconutil -c icns AppIcon.iconset -o AppIcon.icns
 |---|---|
 | `F50_LOGIN_ITEM=1` / `=0` | 命令行开关开机自启 |
 | `F50_SHOW_DASHBOARD=1` | 启动时直接打开仪表盘窗口 |
+| `F50_DEMO=1` | 演示模式，用假数据填充界面，不连真实设备 |
+| `F50_RENDER_SHOTS=<目录>` | 把界面渲染成 PNG 后退出，用于生成文档截图 |
+
+## 演示模式
+
+没有 F50 Pro 也能看界面长什么样：
+
+```bash
+F50_DEMO=1 "/Applications/F50 Dashboard.app/Contents/MacOS/F50 Dashboard"
+```
+
+README 里的截图就是这么生成的 —— 直接用 ImageRenderer 把视图画成 PNG，
+不经过屏幕截图，所以不含任何真实设备信息：
+
+```bash
+F50_DEMO=1 F50_RENDER_SHOTS="$(pwd)/docs" \
+    "build/F50 Dashboard.app/Contents/MacOS/F50 Dashboard"
+```
+
+注意 `ImageRenderer` 画不出 `ScrollView` 的内容，也画不出 `Toggle`、`ProgressView`
+这类系统控件（会变成一块黄色占位图）。所以仪表盘在截图模式下不套 `ScrollView`，
+进度条改用自绘的 `ProgressBar`，面板里的开关也换成静态样式。
 
 ## 排查
 
