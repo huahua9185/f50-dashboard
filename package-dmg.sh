@@ -16,25 +16,36 @@ NOTARY_PROFILE="${NOTARY_PROFILE:-f50-notary}"
 DIST_DIR="dist"
 DMG="${DIST_DIR}/F50-Dashboard-${VERSION}.dmg"
 
+# grep 没匹配到会返回 1，在 pipefail 下得显式吞掉，否则脚本直接退出
 IDENTITY="$(security find-identity -v -p codesigning \
-    | grep "Developer ID Application" \
+    | { grep "Developer ID Application" || true; } \
     | head -1 \
     | sed -E 's/.*"(.*)"/\1/')"
 
+# 没有 Developer ID 证书时退化成 ad-hoc 签名、不公证。
+# 这种包只适合自用或内测：别人打开会被 Gatekeeper 拦，需要右键「打开」。
 if [ -z "$IDENTITY" ]; then
-    echo "错误：找不到 Developer ID Application 证书。" >&2
-    echo "请在 Xcode › Settings › Accounts › Manage Certificates 中创建后重试。" >&2
-    exit 1
+    echo "⚠️  找不到 Developer ID Application 证书，改出未公证版本。" >&2
+    echo "   正式分发请先在 Xcode › Settings › Accounts › Manage Certificates 创建证书。" >&2
+    IDENTITY="-"
+    UNSIGNED=1
+    DMG="${DIST_DIR}/F50-Dashboard-${VERSION}-unsigned.dmg"
+else
+    UNSIGNED=0
+    echo "==> 使用证书: $IDENTITY"
 fi
-echo "==> 使用证书: $IDENTITY"
 
 echo "==> 重新构建"
 ./build-app.sh > /dev/null
 
 echo "==> 签名 app"
-# 公证要求启用 hardened runtime，并带安全时间戳
-codesign --force --deep --options runtime --timestamp \
-    --sign "$IDENTITY" "build/${APP_NAME}.app"
+if [ "$UNSIGNED" = 1 ]; then
+    codesign --force --deep --sign - "build/${APP_NAME}.app"
+else
+    # 公证要求启用 hardened runtime，并带安全时间戳
+    codesign --force --deep --options runtime --timestamp \
+        --sign "$IDENTITY" "build/${APP_NAME}.app"
+fi
 codesign --verify --strict --verbose=2 "build/${APP_NAME}.app"
 
 echo "==> 制作 DMG"
@@ -45,6 +56,13 @@ cp -R "build/${APP_NAME}.app" "$STAGING/"
 ln -s /Applications "$STAGING/Applications"
 hdiutil create -volname "$APP_NAME" -srcfolder "$STAGING" -ov -format UDZO "$DMG" > /dev/null
 rm -rf "$STAGING"
+
+if [ "$UNSIGNED" = 1 ]; then
+    echo
+    echo "⚠️  完成（未公证）: $(pwd)/${DMG}"
+    echo "   仅供自用或内测。对外发布需要 Developer ID 证书 + 公证。"
+    exit 0
+fi
 
 echo "==> 签名 DMG"
 codesign --force --sign "$IDENTITY" "$DMG"
