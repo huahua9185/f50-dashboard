@@ -9,6 +9,8 @@ struct MenuPanelView: View {
     /// 生成文档截图用：ImageRenderer 画不出真的 Toggle，换成静态样式。
     var isPreview = false
 
+    private var prefs: Preferences { Preferences.shared }
+
     @State private var launchAtLogin = LoginItem.isEnabled
     @State private var loginItemError: String?
 
@@ -94,7 +96,7 @@ struct MenuPanelView: View {
             Label(title, systemImage: symbol)
                 .font(.caption2)
                 .foregroundStyle(color)
-            Text(Format.rate(value))
+            Text(Format.rate(value, unit: prefs.rateUnit))
                 .font(.title3.monospacedDigit().weight(.semibold))
         }
         .frame(maxWidth: .infinity)
@@ -123,42 +125,80 @@ struct MenuPanelView: View {
     }
 
     private var settingsSection: some View {
-        VStack(alignment: .leading, spacing: 5) {
+        VStack(alignment: .leading, spacing: 7) {
             if isPreview {
+                previewUnitPicker
                 previewToggle
             } else {
-                Toggle("开机自启", isOn: $launchAtLogin)
-                .font(.callout)
-                .toggleStyle(.switch)
-                .controlSize(.mini)
-                .onChange(of: launchAtLogin) { _, newValue in
-                    do {
-                        try LoginItem.setEnabled(newValue)
-                        loginItemError = nil
-                    } catch {
-                        // 注册失败就把开关拨回去，别让界面显示一个并未生效的状态
-                        launchAtLogin = !newValue
-                        loginItemError = error.localizedDescription
-                    }
-                }
-            }
+                unitPicker
+                launchToggle
 
-            if isPreview {
-                EmptyView()
-            } else if let loginItemError {
-                Text(loginItemError)
-                    .font(.caption2)
-                    .foregroundStyle(.red)
-                    .fixedSize(horizontal: false, vertical: true)
-            } else if !LoginItem.isInApplicationsFolder {
-                Text("建议先把 app 移到「应用程序」文件夹，登录项才不会失效。")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                if let loginItemError {
+                    Text(loginItemError)
+                        .font(.caption2)
+                        .foregroundStyle(.red)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else if !LoginItem.isInApplicationsFolder {
+                    Text("建议先把 app 移到「应用程序」文件夹，登录项才不会失效。")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 9)
+    }
+
+    /// 速率单位切换。路由器网页用 bit/s，macOS 习惯用 Byte/s，两者差 8 倍。
+    private var unitPicker: some View {
+        Picker("速率单位", selection: Binding(
+            get: { prefs.rateUnit },
+            set: { prefs.rateUnit = $0 }
+        )) {
+            ForEach(RateUnit.allCases, id: \.self) { unit in
+                Text(unit.title).tag(unit)
+            }
+        }
+        .pickerStyle(.segmented)
+        .labelsHidden()
+        .help(prefs.rateUnit.explanation)
+    }
+
+    private var launchToggle: some View {
+        Toggle("开机自启", isOn: $launchAtLogin)
+            .font(.callout)
+            .toggleStyle(.switch)
+            .controlSize(.mini)
+            .onChange(of: launchAtLogin) { _, newValue in
+                do {
+                    try LoginItem.setEnabled(newValue)
+                    loginItemError = nil
+                } catch {
+                    // 注册失败就把开关拨回去，别让界面显示一个并未生效的状态
+                    launchAtLogin = !newValue
+                    loginItemError = error.localizedDescription
+                }
+            }
+    }
+
+    /// 截图用的静态分段控件外观（ImageRenderer 画不出真的 Picker）。
+    private var previewUnitPicker: some View {
+        HStack(spacing: 0) {
+            ForEach(RateUnit.allCases, id: \.self) { unit in
+                Text(unit.title)
+                    .font(.caption)
+                    .fontWeight(unit == prefs.rateUnit ? .semibold : .regular)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 3)
+                    .background(
+                        unit == prefs.rateUnit ? Color(nsColor: .controlBackgroundColor) : .clear,
+                        in: .rect(cornerRadius: 5)
+                    )
+            }
+        }
+        .padding(2)
+        .background(.quaternary.opacity(0.5), in: .rect(cornerRadius: 7))
     }
 
     /// 只用于截图的静态开关外观。

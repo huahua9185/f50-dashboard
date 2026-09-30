@@ -2,8 +2,12 @@ import SwiftUI
 
 struct DashboardView: View {
     var monitor: DeviceMonitor
+    var center = MessageCenter.shared
+    private var prefs: Preferences { Preferences.shared }
     /// ImageRenderer 渲染不出 ScrollView 的内容，生成文档截图时关掉滚动直接平铺。
     var scrollable = true
+
+    @State private var section = DashboardSection.initial
 
     private var snapshot: DeviceSnapshot { monitor.snapshot }
 
@@ -22,24 +26,52 @@ struct DashboardView: View {
 
     private var content: some View {
         VStack(alignment: .leading, spacing: 16) {
-                header
-                HStack(alignment: .top, spacing: 12) {
-                    connectionCard
-                    signalCard
-                    throughputCard
-                    sessionCard
-                }
-                chartCard
-                HStack(alignment: .top, spacing: 12) {
-                    stationsCard
-                    VStack(spacing: 12) {
-                        monthlyCard
-                        deviceCard
-                    }
-                    .frame(width: 260)
-                }
+            header
+            sectionPicker
+
+            switch section {
+            case .overview:
+                overview
+            case .messages:
+                MessagesView(center: center)
+            }
         }
         .padding(18)
+    }
+
+    private var overview: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .top, spacing: 12) {
+                connectionCard
+                signalCard
+                throughputCard
+                sessionCard
+            }
+            chartCard
+            HStack(alignment: .top, spacing: 12) {
+                stationsCard
+                VStack(spacing: 12) {
+                    monthlyCard
+                    deviceCard
+                }
+                .frame(width: 260)
+            }
+        }
+    }
+
+    private var sectionPicker: some View {
+        Picker("", selection: $section) {
+            ForEach(DashboardSection.allCases, id: \.self) { item in
+                if item == .messages, center.unreadCount > 0 {
+                    Text("\(item.title) (\(center.unreadCount))").tag(item)
+                } else {
+                    Text(item.title).tag(item)
+                }
+            }
+        }
+        .pickerStyle(.segmented)
+        .labelsHidden()
+        .frame(width: 220)
     }
 
     // MARK: - 顶部
@@ -115,12 +147,12 @@ struct DashboardView: View {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 5) {
                     Image(systemName: "arrow.down").font(.caption).foregroundStyle(.blue)
-                    Text(Format.rate(snapshot.downloadRate))
+                    Text(Format.rate(snapshot.downloadRate, unit: prefs.rateUnit))
                         .font(.title2.monospacedDigit().weight(.semibold))
                 }
                 HStack(spacing: 5) {
                     Image(systemName: "arrow.up").font(.caption).foregroundStyle(.orange)
-                    Text(Format.rate(snapshot.uploadRate))
+                    Text(Format.rate(snapshot.uploadRate, unit: prefs.rateUnit))
                         .font(.title3.monospacedDigit())
                         .foregroundStyle(.secondary)
                 }
@@ -141,10 +173,10 @@ struct DashboardView: View {
     private var chartCard: some View {
         StatCard(title: "速率走势（最近 4 分钟）", systemImage: "chart.xyaxis.line", tint: .blue) {
             HStack(spacing: 14) {
-                ChartKey(color: .blue, label: "下行", value: Format.rate(snapshot.downloadRate))
-                ChartKey(color: .orange, label: "上行", value: Format.rate(snapshot.uploadRate))
+                ChartKey(color: .blue, label: "下行", value: Format.rate(snapshot.downloadRate, unit: prefs.rateUnit))
+                ChartKey(color: .orange, label: "上行", value: Format.rate(snapshot.uploadRate, unit: prefs.rateUnit))
             }
-            ThroughputChart(samples: monitor.history, upperBound: monitor.chartUpperBound)
+            ThroughputChart(samples: monitor.history, upperBound: monitor.chartUpperBound, rateUnit: prefs.rateUnit)
                 .frame(height: 170)
         }
     }

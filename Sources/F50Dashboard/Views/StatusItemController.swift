@@ -52,6 +52,8 @@ final class StatusItemController {
             _ = monitor.snapshot.uploadRate
             _ = monitor.snapshot.signalBars
             _ = monitor.isReachable
+            _ = MessageCenter.shared.unreadCount
+            _ = Preferences.shared.rateUnit
         } onChange: { [weak self] in
             Task { @MainActor in
                 self?.updateButton()
@@ -64,7 +66,12 @@ final class StatusItemController {
         guard let button = statusItem.button else { return }
 
         let renderer = ImageRenderer(
-            content: MenuBarLabelView(snapshot: monitor.snapshot, isReachable: monitor.isReachable)
+            content: MenuBarLabelView(
+                snapshot: monitor.snapshot,
+                isReachable: monitor.isReachable,
+                unreadCount: MessageCenter.shared.unreadCount,
+                rateUnit: Preferences.shared.rateUnit
+            )
         )
         renderer.scale = NSScreen.main?.backingScaleFactor ?? 2
 
@@ -79,8 +86,8 @@ final class StatusItemController {
         guard monitor.isReachable else { return "F50 Pro · 未连接" }
         let parts = [monitor.snapshot.provider, monitor.snapshot.networkType].compactMap { $0 }
         return "F50 Pro · " + parts.joined(separator: " ")
-            + "\n下行 \(Format.rate(monitor.snapshot.downloadRate))"
-            + "\n上行 \(Format.rate(monitor.snapshot.uploadRate))"
+            + "\n下行 \(Format.rate(monitor.snapshot.downloadRate, unit: Preferences.shared.rateUnit))"
+            + "\n上行 \(Format.rate(monitor.snapshot.uploadRate, unit: Preferences.shared.rateUnit))"
     }
 
     @objc private func togglePopover() {

@@ -25,6 +25,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             monitor.loadDemo()
         } else {
             monitor.start()
+            Notifier.shared.start()
+            MessageCenter.shared.start()
         }
 
         // 渲染文档截图后直接退出，不进入正常的界面流程。

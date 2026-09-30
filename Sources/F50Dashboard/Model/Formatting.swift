@@ -6,15 +6,14 @@ enum Format {
         units(value, suffixes: ["B", "KB", "MB", "GB", "TB"])
     }
 
-    /// 实时速率，例如 “2.4 MB/s”。
-    static func rate(_ value: Double) -> String {
-        units(value, suffixes: ["B", "KB", "MB", "GB"]) + "/s"
+    /// 实时速率，例如 “2.4 MB/s”。传入的始终是字节每秒，按单位换算后再格式化。
+    static func rate(_ value: Double, unit: RateUnit = .bytes) -> String {
+        units(value * unit.multiplier, suffixes: unit.suffixes) + "/s"
     }
 
-    /// 菜单栏空间很窄，这里省掉单位里的 B，显示成 “2.4M”。
-    static func compactRate(_ value: Double) -> String {
-        let text = units(value, suffixes: ["B", "K", "M", "G"], compact: true)
-        return text
+    /// 菜单栏空间很窄，量级只留一个字母，显示成 “2.4M”。
+    static func compactRate(_ value: Double, unit: RateUnit = .bytes) -> String {
+        units(value * unit.multiplier, suffixes: unit.compactSuffixes, compact: true)
     }
 
     private static func units(

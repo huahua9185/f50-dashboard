@@ -6,6 +6,7 @@ struct ThroughputChart: View {
     var samples: [RateSample]
     var upperBound: Double
     var showsAxes = true
+    var rateUnit: RateUnit = .bytes
 
     var body: some View {
         Chart {
@@ -51,7 +52,7 @@ struct ThroughputChart: View {
                     AxisGridLine().foregroundStyle(.secondary.opacity(0.15))
                     AxisValueLabel {
                         if let rate = value.as(Double.self) {
-                            Text(Format.rate(rate)).font(.caption2)
+                            Text(Format.rate(rate, unit: rateUnit)).font(.caption2)
                         }
                     }
                 }

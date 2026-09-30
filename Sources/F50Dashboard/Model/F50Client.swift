@@ -17,7 +17,7 @@ enum F50ClientError: LocalizedError {
 struct F50Client: Sendable {
     var host: String = "192.168.0.1"
 
-    private var endpoint: URL {
+    var endpoint: URL {
         URL(string: "http://\(host)/goform/goform_get_cmd_process")!
     }
 
@@ -36,8 +36,11 @@ struct F50Client: Sendable {
         "SSID1", "wa_inner_version", "hardware_version", "mac_address", "msisdn",
     ]
 
-    private static let session: URLSession = {
+    static let session: URLSession = {
         let config = URLSessionConfiguration.ephemeral
+        // 登录态靠 cookie 维持，必须让 session 收下并带上它。
+        config.httpCookieAcceptPolicy = .always
+        config.httpShouldSetCookies = true
         config.timeoutIntervalForRequest = 4
         config.timeoutIntervalForResource = 6
         // 设备的数值变化很快，任何缓存都会让面板显示过期数据。
@@ -45,7 +48,7 @@ struct F50Client: Sendable {
         return URLSession(configuration: config)
     }()
 
-    private func fetch(commands: [String]) async throws -> [String: JSONValue] {
+    func fetch(commands: [String]) async throws -> [String: JSONValue] {
         var components = URLComponents(url: endpoint, resolvingAgainstBaseURL: false)!
         components.queryItems = [
             URLQueryItem(name: "isTest", value: "false"),

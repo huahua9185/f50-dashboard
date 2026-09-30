@@ -6,6 +6,8 @@ import SwiftUI
 struct MenuBarLabelView: View {
     var snapshot: DeviceSnapshot
     var isReachable: Bool
+    var unreadCount: Int = 0
+    var rateUnit: RateUnit = .bytes
 
     var body: some View {
         HStack(spacing: 3) {
@@ -17,12 +19,25 @@ struct MenuBarLabelView: View {
                     rateText(prefix: "↑", value: snapshot.uploadRate)
                 }
             }
+
+            // 有未读短信时加一个信封，数量多了就只显示图标
+            if unreadCount > 0 {
+                HStack(spacing: 1) {
+                    Image(systemName: "envelope.fill")
+                        .font(.system(size: 7))
+                    if unreadCount < 10 {
+                        Text("\(unreadCount)")
+                            .font(.system(size: 8, weight: .bold).monospacedDigit())
+                    }
+                }
+                .foregroundStyle(.black)
+            }
         }
         .padding(.horizontal, 2)
     }
 
     private func rateText(prefix: String, value: Double) -> some View {
-        Text("\(prefix)\(Format.compactRate(value))")
+        Text("\(prefix)\(Format.compactRate(value, unit: rateUnit))")
             .font(.system(size: 8, weight: .medium).monospacedDigit())
             .foregroundStyle(.black)
     }
