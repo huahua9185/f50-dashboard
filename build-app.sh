@@ -4,6 +4,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 APP_NAME="F50 Dashboard"
+VERSION="${VERSION:-1.1}"
 BUNDLE="build/${APP_NAME}.app"
 
 echo "==> 编译 release"
@@ -33,9 +34,9 @@ cat > "$BUNDLE/Contents/Info.plist" <<'PLIST'
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0</string>
+    <string>__VERSION__</string>
     <key>CFBundleVersion</key>
-    <string>1</string>
+    <string>__VERSION__</string>
     <key>LSMinimumSystemVersion</key>
     <string>15.0</string>
     <!-- 菜单栏常驻，平时不出现在 Dock 里 -->
@@ -52,6 +53,8 @@ cat > "$BUNDLE/Contents/Info.plist" <<'PLIST'
     <string>需要访问局域网内的 ZTE F50 Pro 路由器以读取其运行状态。</string>
 </dict>
 PLIST
+# 版本号由脚本顶部的 VERSION 决定，避免改版本时漏改某一处
+sed -i "" "s/__VERSION__/${VERSION}/g" "$BUNDLE/Contents/Info.plist"
 echo "</plist>" >> "$BUNDLE/Contents/Info.plist"
 
 # 未签名的 app 在本机运行需要一个 ad-hoc 签名，否则可能被直接拒绝启动

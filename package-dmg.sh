@@ -4,9 +4,13 @@
 # 前置条件（各做一次即可）：
 #   1. 拥有 Developer ID Application 证书
 #      Xcode › Settings › Accounts › Manage Certificates › + › Developer ID Application
-#   2. 存好公证凭据（需要 App 专用密码，去 appleid.apple.com 生成）
-#      xcrun notarytool store-credentials "f50-notary" \
-#          --apple-id <你的 Apple ID> --team-id <团队 ID> --password <App 专用密码>
+#   2. 准备公证凭据，二选一：
+#      a) App Store Connect API 密钥（推荐，文件式，不受钥匙串重置影响）
+#         把 .p8 放到 ~/.appstoreconnect/private_keys/AuthKey_<KEYID>.p8，
+#         并设好 F50_KEY_ID 与 F50_ISSUER_ID 两个环境变量。
+#      b) 钥匙串 profile（需要 App 专用密码，去 appleid.apple.com 生成）
+#         xcrun notarytool store-credentials "f50-notary" \
+#             --apple-id <你的 Apple ID> --team-id <团队 ID>
 set -euo pipefail
 
 cd "$(dirname "$0")"
@@ -68,7 +72,17 @@ echo "==> 签名 DMG"
 codesign --force --sign "$IDENTITY" "$DMG"
 
 echo "==> 提交公证（通常几分钟）"
-xcrun notarytool submit "$DMG" --keychain-profile "$NOTARY_PROFILE" --wait
+# 优先用 API 密钥：它是磁盘上的文件，不会像钥匙串条目那样莫名消失
+API_KEY="$HOME/.appstoreconnect/private_keys/AuthKey_${F50_KEY_ID:-none}.p8"
+if [ -n "${F50_KEY_ID:-}" ] && [ -n "${F50_ISSUER_ID:-}" ] && [ -f "$API_KEY" ]; then
+    echo "    使用 API 密钥 $F50_KEY_ID"
+    NOTARY_AUTH=(--key "$API_KEY" --key-id "$F50_KEY_ID" --issuer "$F50_ISSUER_ID")
+else
+    echo "    使用钥匙串 profile $NOTARY_PROFILE"
+    NOTARY_AUTH=(--keychain-profile "$NOTARY_PROFILE")
+fi
+
+xcrun notarytool submit "$DMG" "${NOTARY_AUTH[@]}" --wait
 
 echo "==> 装订公证票据"
 # 装订后即使离线，Gatekeeper 也能验证通过
